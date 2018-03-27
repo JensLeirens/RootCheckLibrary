@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">RootCheckerNative</string>
+    <string name="callFailed">Call failed try again</string>
+    <string name="btnText">Check</string>
+    <string name="imageDescription">checked or not checked</string>
+    <string name="tab_root_checker">Root checker</string>
+    <string name="tab_safety_net_checker">Safety Net Checker</string>
+</resources>
