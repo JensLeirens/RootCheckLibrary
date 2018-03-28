@@ -21,7 +21,7 @@ android {
         }
     }
     defaultConfig {
-        buildConfigField("String", "API_KEY", "\"AIzaSyDVFJ4F30z8fT47LOUi-mIEY9R-MJlFFng\"") // TODO add key
+        buildConfigField("String", "API_KEY", "") // TODO add key
     }
 
     externalNativeBuild {
@@ -30,10 +30,8 @@ android {
         }
     }
 }
-
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'com.android.support:design:27.1.0'
     implementation 'com.android.support:appcompat-v7:27.1.0'
     implementation 'com.android.support.constraint:constraint-layout:1.0.2'
@@ -51,4 +49,5 @@ dependencies {
 
     //Picasso
     implementation 'com.squareup.picasso:picasso:2.5.2'
+    implementation project(':RootcheckLib')
 }

@@ -1,12 +1,30 @@
 package com.leirens.jens.rootchecklib.SafetyNet;
 
+import android.app.Activity;
+import android.content.Context;
 import android.support.annotation.NonNull;
 import android.util.Base64;
 import android.util.Log;
+import android.view.View;
+
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.CommonStatusCodes;
+import com.google.android.gms.safetynet.SafetyNet;
+import com.google.android.gms.safetynet.SafetyNetApi;
+import com.google.android.gms.safetynet.SafetyNetClient;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.leirens.jens.rootchecklib.BuildConfig;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.security.SecureRandom;
+import java.util.Random;
 
 public class SafetyNetHelper {
 
@@ -20,6 +38,11 @@ public class SafetyNetHelper {
         return safetyNetResponse;
     }
 
+    /**
+     * Parse the JWS string into a decoded JWT
+     *
+     * @param jwsResult JWS String that is recieved from the google SafetNet Api
+     */
     public void parseJWS(String jwsResult){
 
         if (jwsResult != null) {
@@ -89,5 +112,70 @@ public class SafetyNetHelper {
         } catch (JSONException e) {
             Log.e(TAG, "problem parsing decodedJWTPayload:" + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Sends the request to the google api and handles the response for you.
+     * the api call happens asynchronously
+     * you problably want to implement this yourself
+     * @param callingActivity the activty that want to make the request
+     * @param apikey your api key from google to call the SafetyNet service
+     */
+    public void sendRequest(Activity callingActivity, String apikey) {
+        String nonceData = "RootChecker application: " + System.currentTimeMillis();
+        byte[] nonce = getRequestNonce(nonceData);
+
+        // first get a safetynetclient for the foreground activity
+        SafetyNetClient client = SafetyNet.getClient(callingActivity.getApplicationContext());
+
+        // make the call
+        Task<SafetyNetApi.AttestationResponse> task = client.attest(nonce , apikey);
+        task.addOnSuccessListener(callingActivity, mSucceslistener)
+                .addOnFailureListener(callingActivity, mFailureListener);
+    }
+
+    private OnSuccessListener<SafetyNetApi.AttestationResponse> mSucceslistener = new OnSuccessListener<SafetyNetApi.AttestationResponse>() {
+        @Override
+        public void onSuccess(SafetyNetApi.AttestationResponse attestationResponse) {
+            String mResult;
+            mResult = attestationResponse.getJwsResult();
+            Log.d("SafetenetAPI", "Succes; Result= " + mResult);
+            parseJWS(mResult);
+        }
+    };
+
+    private OnFailureListener mFailureListener = new OnFailureListener() {
+        @Override
+        public void onFailure(@NonNull Exception e) {
+
+            if ( e instanceof ApiException) {
+                ApiException apiException = (ApiException) e ;
+                Log.e("SafetyNetAPI", "API exception Error: " + CommonStatusCodes.getStatusCodeString(apiException.getStatusCode())
+                        + ": " + apiException.getStatusCode() + " message: " + e.getMessage()) ;
+            } else {
+                Log.e("SafetyNetAPI", "Error: " + e.getMessage()) ;
+            }
+        }
+    };
+
+    /**
+     * converts the data string to an array of bytes
+     *
+     * @param data String that you want to convert to an array of bytes
+     */
+    private byte[] getRequestNonce(String data) {
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+
+        final Random mRandom = new SecureRandom();
+        byte[] bytes = new byte[24];
+        mRandom.nextBytes(bytes);
+        try {
+            byteStream.write(bytes);
+            byteStream.write(data.getBytes());
+        } catch (IOException e) {
+            return null;
+        }
+
+        return byteStream.toByteArray();
     }
 }
